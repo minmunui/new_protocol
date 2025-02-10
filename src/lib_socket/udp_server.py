@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 
 
-def start_server(host='localhost', port=9999, buffer_size=2 * 8192, target_dir="received"):
+def start_server(host='localhost', port=9999, buffer_size=4096, target_dir="received"):
     # 서버 소켓 생성
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind((host, port))
@@ -35,7 +35,7 @@ def start_server(host='localhost', port=9999, buffer_size=2 * 8192, target_dir="
 
                 # 진행률 출력
                 progress = (len(chunks) / total_chunks) * 100
-                print(f"\r수신 진행률: {progress:.1f}%", end='')
+                print(f"\r수신 진행률: {progress:.1f}% seq_num: {seq_num}", end='')
 
                 # 타임아웃 체크
                 if time.time() - start_time > timeout:
