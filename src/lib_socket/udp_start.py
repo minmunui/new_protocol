@@ -8,13 +8,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--file", type=str, default="./input/file")
     parser.add_argument("-c", "--client", type=bool, default=False)
-    parser.add_argument("-h", "--host", type=str, default="localhost")
+    parser.add_argument("-t", "--target", type=str, default="localhost")
     parser.add_argument("-p", "--port", type=int, default=9999)
     parser.add_argument("-b", "--buffer_size", type=int, default=2)
 
     args = parser.parse_args()
 
-    host = args.host
+    host = args.target
     port = args.port
     is_client = args.client
 
