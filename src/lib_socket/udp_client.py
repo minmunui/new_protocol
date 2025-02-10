@@ -25,6 +25,7 @@ def send_file(filename, host='localhost', port=9999, buffer_size=4096):
         # 파일 정보 전송 (파일명 + 총 청크 수)
         file_info = struct.pack('!256sI', filename.encode(), total_chunks)
         print("data size : ", len(file_info))
+        print("filename : ", filename, end="")
         client_socket.sendto(file_info, server_address)
 
         # 파일 전송 시작
