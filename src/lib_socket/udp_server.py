@@ -4,30 +4,42 @@ import struct
 import time
 from pathlib import Path
 
+BUFFER_SIZE = 1024 * 1024 * 512  # 1GB
+
+
+def flush_receive_buffer(sock, buffer_size=BUFFER_SIZE):
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 0)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size)
+
 
 def start_server(host='localhost', port=9999, buffer_size=4096, target_dir="received"):
     # 서버 소켓 생성
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind((host, port))
+
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFFER_SIZE)
+    flush_receive_buffer(server_socket)
+
     print(f"서버가 {host}:{port}에서 시작되었습니다...")
     print(f"파일을 받을 디렉터리: {target_dir}")
     print(f"버퍼 크기: {buffer_size}")
+
     while True:
-        # 클라이언트로부터 파일 정보 받기
-        data, client_address = server_socket.recvfrom(buffer_size)
+        # 파일 정보는 항상 고정된 크기로 받기
+        data, client_address = server_socket.recvfrom(512)  # 초기 정보는 작은 크기로 받음
         filename, total_chunks = struct.unpack('!256sI', data[:260])
         filename = filename.decode().strip('\x00')
         print(f"파일 {filename}을(를) 받기 시작합니다... (총 {total_chunks}개 청크)")
 
-        # 청크를 저장할 딕셔너리 초기화
+        # 이후 데이터 수신할 때는 지정된 버퍼 크기 사용
         chunks = {}
         start_time = time.time()
-        timeout = 10  # 10초 타임아웃
+        timeout = 10
 
-        # 청크 수신
         while len(chunks) < total_chunks:
             try:
-                data, _ = server_socket.recvfrom(buffer_size + 8)  # SEQ 번호(4바이트) + 청크 크기(4바이트) + 데이터
+                # 실제 데이터 수신 시에는 buffer_size 사용
+                data, _ = server_socket.recvfrom(buffer_size)
                 seq_num, chunk_size = struct.unpack('!II', data[:8])
                 chunk_data = data[8:8 + chunk_size]
 
@@ -35,7 +47,7 @@ def start_server(host='localhost', port=9999, buffer_size=4096, target_dir="rece
 
                 # 진행률 출력
                 progress = (len(chunks) / total_chunks) * 100
-                print(f"\r수신 진행률: {progress:.1f}% seq_num: {seq_num}", end='')
+                print(f"\r수신 진행률: {progress:.1f}% seq_num: {seq_num}")
 
                 # 타임아웃 체크
                 if time.time() - start_time > timeout:
