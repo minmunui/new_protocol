@@ -4,7 +4,7 @@ import socket
 import struct
 
 
-def send_file(filename, host='localhost', port=9999, buffer_size=2*8192):
+def send_file(filename, host='localhost', port=9999, buffer_size=4096):
     # 클라이언트 소켓 생성
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = (host, port)
