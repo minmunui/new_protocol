@@ -1,4 +1,3 @@
-import math
 import socket
 import os
 import struct
@@ -6,7 +5,7 @@ import time
 from pathlib import Path
 
 
-def start_server(host='localhost', port=9999, buffer_size=2*8192, target_dir="received"):
+def start_server(host='localhost', port=9999, buffer_size=2 * 8192, target_dir="received"):
     # 서버 소켓 생성
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind((host, port))
@@ -78,7 +77,6 @@ def start_server(host='localhost', port=9999, buffer_size=2*8192, target_dir="re
         print(f"measured_transfer_speed\t{file_size / transfer_elapsed_time}")
         print(f"measured_total_speed\t{file_size / total_elapsed_time}")
         print(f"파일 {filename} 수신 완료!")
-
 
 
 # 사용 예시
