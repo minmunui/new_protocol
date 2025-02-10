@@ -8,6 +8,9 @@ def send_file(filename, host='localhost', port=9999, buffer_size=4096):
     # 클라이언트 소켓 생성
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = (host, port)
+    print(f"파일 {filename}을(를) 전송합니다...")
+    print(f"서버 주소: {host}:{port}")
+    print(f"버퍼 크기: {buffer_size}")
 
     try:
         # 파일 존재 확인

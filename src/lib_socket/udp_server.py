@@ -10,7 +10,8 @@ def start_server(host='localhost', port=9999, buffer_size=2 * 8192, target_dir="
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind((host, port))
     print(f"서버가 {host}:{port}에서 시작되었습니다...")
-
+    print(f"파일을 받을 디렉터리: {target_dir}")
+    print(f"버퍼 크기: {buffer_size}")
     while True:
         # 클라이언트로부터 파일 정보 받기
         data, client_address = server_socket.recvfrom(buffer_size)
