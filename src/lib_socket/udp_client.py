@@ -25,13 +25,12 @@ def wait_ack(sock: socket.socket, timeout: float = 3.0) -> array[int]:
     sock.settimeout(timeout)
 
     try:
-        packed_data, addr = sock.recvfrom(KB_1 * 8)
+        packed_data, addr = sock.recvfrom(KB_1 * 32)
         # ACK는 정수의 배열
         result_array = array('i')
         result_array.frombytes(packed_data)
         print(f"ACK전달받음 : {result_array}")
     except socket.timeout:
-        print("ACK전달받지 못함")
         raise socket.timeout
 
     sock.setblocking(False)
@@ -51,8 +50,10 @@ def process_ack(sock: socket.socket, client_address: tuple, packet_dict : dict, 
     while True:
         try:
             print(f"ACK를 기다리는 중")
+            print(f"받아야 할 seq_number: {last_seq_number}")
             return wait_ack(sock, timeout)
         except socket.timeout:
+            print(f"ACK 재전송 seq_number {last_seq_number}")
             sock.sendto(packet_dict[last_seq_number], client_address)
 
 
@@ -103,7 +104,7 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
                 packet_dict[seq_num] = packet
                 client_socket.sendto(packet, server_address)
 
-                # time.sleep(0.001)
+                # time.sleep(0.0001)
 
                 # 진행률 출력
                 progress = ((seq_num + 1) / total_chunks) * 100
@@ -119,7 +120,7 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
                 print(f"완료된 ACK 전달받음")
                 transfer_complete = True
             else:
-                last_seq_number = dropped_seq_numbers[-1]
+                last_seq_number = max(dropped_seq_numbers)
                 print(f"소실패킷 재전송 dropped_seq_numbers: {dropped_seq_numbers}")
                 resend_dropped_data(client_socket, dropped_seq_numbers, packet_dict, server_address)
 
