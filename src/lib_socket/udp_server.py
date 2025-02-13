@@ -78,7 +78,7 @@ def start_server(host='localhost', port=9999, buffer_size=4096, target_dir="rece
 
                 # 진행률 출력
                 progress = (len(chunks) / total_chunks) * 100
-                print(f"\r수신 진행률: {progress:.1f}% seq_num: {seq_num} / {total_chunks}", end="")
+                print(f"\r수신 진행률: {progress:.1f}% seq_num: {seq_num} / {last_seq_num}", end="")
 
                 # 마지막 청크인지 체크
                 if seq_num == last_seq_num:
@@ -91,6 +91,7 @@ def start_server(host='localhost', port=9999, buffer_size=4096, target_dir="rece
                     print(f"분실된 패킷 : {missed_seqs}")
                     if len(missed_seqs) > 0:
                         last_seq_num = max(missed_seqs)
+                        print(f"새로운 last_seq = {last_seq_num}")
 
                     send_ack(missed_seqs, server_socket, client_address)
                 # 타임아웃 체크
