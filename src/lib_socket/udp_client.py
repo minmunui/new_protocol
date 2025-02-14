@@ -37,7 +37,7 @@ def wait_ack(sock: socket.socket, timeout: float = 3.0) -> array[int]:
     return result_array
 
 
-def process_ack(sock: socket.socket, client_address: tuple, packet_dict : dict, last_seq_number : int, timeout: float = 0.1) -> array[int]:
+def process_ack(sock: socket.socket, client_address: tuple, packet_dict : dict, last_seq_number : int, timeout: float = 0.5) -> array[int]:
     """
     ack를 받아 처리하고, ack가 오지 않을 경우 마지막 chucnk를 재전송합니다. ack를 받을 경우 ack를 반환합니다.
 
@@ -47,13 +47,18 @@ def process_ack(sock: socket.socket, client_address: tuple, packet_dict : dict, 
         packet_dict : ACK를 전달맏지 못할 경우 전송하는데 사용하는 패킷 dict입니다.
         last_seq_number : 현재 전송에서 ACK를 유발하는 마지막 seq_number입니다.
     """
+    retry_count = 0
     while True:
         try:
             print(f"ACK를 기다리는 중")
             print(f"받아야 할 seq_number: {last_seq_number}")
             return wait_ack(sock, timeout)
         except socket.timeout:
-            print(f"ACK 재전송 seq_number {last_seq_number}")
+            retry_count += 1
+            if retry_count > 5:
+                print(f"재전송 초과됨 횟수 초과됨")
+                raise socket.timeout
+            print(f"ACK 재전송 seq_number {last_seq_number} | 재전송 : {retry_count}")
             sock.sendto(packet_dict[last_seq_number], client_address)
 
 
@@ -67,7 +72,7 @@ def resend_dropped_data(sock: socket.socket, dropped_seq_numbers: list[int] | ar
         sock.sendto(packet_dict[seq_number], server_addr)
 
 
-def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_size: int = 4096):
+def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_size: int = 4096, interval: float = 0.001):
     # 클라이언트 소켓 생성
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = (host, port)
@@ -76,6 +81,8 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
     print(f"버퍼 크기: {buffer_size}")
 
     CHUNK_SIZE = buffer_size - 8
+
+    losses = []
 
     try:
         # 파일 존재 확인
@@ -88,12 +95,14 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
         print(f"청크 수: {total_chunks}")
 
         # 파일 정보 전송 (파일명 + 총 청크 수)
-        file_info = struct.pack('!256sI', filename.encode()[:256], total_chunks)
+        file_info = struct.pack('!II256s', buffer_size, total_chunks, filename.encode()[:256])
         client_socket.sendto(file_info[:512], server_address)
 
         # 청크를 보관하기 위한 dictionary
         packet_dict = {}
         # 파일 전송 시작
+
+        start_time = time.time()
         with open(filename, 'rb') as f:
             for seq_num in range(total_chunks):
                 chunk_data = f.read(CHUNK_SIZE)
@@ -104,18 +113,24 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
                 packet_dict[seq_num] = packet
                 client_socket.sendto(packet, server_address)
 
-                # time.sleep(0.0001)
+                time.sleep(interval)
 
                 # 진행률 출력
                 progress = ((seq_num + 1) / total_chunks) * 100
                 print(f"\r전송 진행률: {progress:.1f}% 전송한 패킷 {seq_num:d}", end='')
 
         print(f"\n파일 {filename} 전송")
+        print(f"소요시간 {time.time() - start_time}")
         transfer_complete = False
 
         last_seq_number = len(packet_dict) - 1
         while not transfer_complete:
-            dropped_seq_numbers = process_ack(client_socket, server_address, packet_dict, last_seq_number)
+            try:
+                dropped_seq_numbers = process_ack(client_socket, server_address, packet_dict, last_seq_number)
+                losses.append(dropped_seq_numbers)
+            except socket.timeout:
+                losses.append([-1])
+                break
             if len(dropped_seq_numbers) == 0:
                 print(f"완료된 ACK 전달받음")
                 transfer_complete = True
@@ -129,3 +144,4 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
     #     print(f"에러 발생: {e}")
     finally:
         client_socket.close()
+        return losses
