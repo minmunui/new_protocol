@@ -9,11 +9,17 @@ from buffer_monitor import BufferMonitor, peek_buffer
 
 BUFFER_SIZE = 1024 * 1024 * 1024  # 1GB
 
+INT_SIZE = 4
+
 def send_ack(missed_seqs : list[int], sock : socket.socket, target_address : tuple):
     arr = array.array('i', missed_seqs)
     packed = arr.tobytes()
     print(f"전송할 패킷정보 크기 {len(packed)}")
-    sock.sendto(packed, target_address)
+    try:
+        sock.sendto(packed, target_address)
+    except OSError as e:
+        print(f"너무 많은 loss")
+
 
 def flush_receive_buffer(sock):
     # Set socket to non-blocking mode
@@ -30,7 +36,7 @@ def flush_receive_buffer(sock):
         # Reset to blocking mode
         sock.setblocking(True)
 
-def start_server(host='localhost', port=9999, buffer_size=4096, target_dir="received"):
+def start_server(host='localhost', port=9999, target_dir="received"):
     # 서버 소켓 생성
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind((host, port))
@@ -42,15 +48,18 @@ def start_server(host='localhost', port=9999, buffer_size=4096, target_dir="rece
 
     print(f"서버가 {host}:{port}에서 시작되었습니다...")
     print(f"파일을 받을 디렉터리: {target_dir}")
-    print(f"버퍼 크기: {buffer_size}")
 
     while True:
         flush_receive_buffer(server_socket)
         # 파일 정보는 항상 고정된 크기로 받기
         data, client_address = server_socket.recvfrom(512)  # 초기 정보는 작은 크기로 받음
-        filename, total_chunks = struct.unpack('!256sI', data[:260])
-        filename = filename.decode().strip('\x00')
-        print(f"파일 {filename}을(를) 받기 시작합니다... (총 {total_chunks}개 청크)")
+        buffer_size, total_chunks, filename = struct.unpack('!II256s', data[:264])
+        try:
+            filename = filename.decode().strip('\x00')
+        except UnicodeDecodeError:
+            print(f"잘못된 패킷 감지됨")
+            continue
+        print(f"파일 {filename}을(를) 받기 시작합니다... (총 {total_chunks}개 청크) (버퍼사이즈 {buffer_size})")
 
         # 이후 데이터 수신할 때는 지정된 버퍼 크기 사용
         chunks = {}
@@ -112,14 +121,14 @@ def start_server(host='localhost', port=9999, buffer_size=4096, target_dir="rece
 
         # 이미 존재하는 파일은 _dup를 붙임
         is_exist = True
-        while is_exist:
-            if os.path.exists(file_path):
-                print(f"이미 존재하는 파일 : {file_path}")
-                file_path = file_path.split('.')
-                file_path = "".join(file_path[:-1]) + "_dup." + file_path[-1]
-                print(f"파일이름 변경 -> {file_path}")
-            else:
-                is_exist = False
+        # while is_exist:
+        #     if os.path.exists(file_path):
+        #         print(f"이미 존재하는 파일 : {file_path}")
+        #         file_path = file_path.split('.')
+        #         file_path = "".join(file_path[:-1]) + "_dup." + file_path[-1]
+        #         print(f"파일이름 변경 -> {file_path}")
+        #     else:
+        #         is_exist = False
 
         Path(target_dir).mkdir(parents=True, exist_ok=True)
 

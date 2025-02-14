@@ -23,4 +23,4 @@ if __name__ == "__main__":
         send_file(file_name, host=host, port=port, buffer_size=4096 * args.buffer_size)
 
     else:
-        start_server(host=host, port=port, buffer_size=4096 * args.buffer_size)
+        start_server(host=host, port=port)
