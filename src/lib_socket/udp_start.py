@@ -5,6 +5,8 @@ import time
 from udp_server import start_server
 from udp_client import send_file
 
+KB = 1024
+
 def program(filename: str, host: str = 'localhost', port: int = 9999, buffer_size: int = 4096):
     start_buffer_size_coef = 4
     end_buffer_size_coef = 16
@@ -54,6 +56,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--port", type=int, default=9999)
     parser.add_argument("-b", "--buffer_size", type=int, default=1)
     parser.add_argument("-d", "--developer", type=bool, default=False)
+    parser.add_argument("-i", "--interval", type=float, default=0.0001)
 
     args = parser.parse_args()
 
@@ -63,13 +66,15 @@ if __name__ == "__main__":
 
     is_developer = args.developer
     file_name = args.file
+    interval = args.interval
+    buffer_size = args.buffer_size
 
     if is_developer:
-        program(file_name, host=host, port=port, buffer_size=4096 * args.buffer_size)
+        program(file_name, host=host, port=port, buffer_size=buffer_size * KB)
 
     if is_client:
-        send_file(file_name, host=host, port=port, buffer_size=4096 * args.buffer_size, interval=0.0001)
+        send_file(file_name, host=host, port=port, buffer_size=buffer_size * KB, interval=interval)
 
     else:
-        start_server(host=host, port=port, buffer_size=4096 * args.buffer_size)
+        start_server(host=host, port=port)
 

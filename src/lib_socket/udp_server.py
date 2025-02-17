@@ -5,11 +5,33 @@ import struct
 import time
 from pathlib import Path
 
-from buffer_monitor import BufferMonitor, peek_buffer
-
 BUFFER_SIZE = 1024 * 1024 * 1024  # 1GB
 
 INT_SIZE = 4
+
+def make_new_filename(filepath:str):
+    """
+    해당 경로에 파일을 저장할 때, 파일을 저장할 수 있는 이름을 반환합니다.
+    Args:
+        filepath : 판별할 파일 이름
+    Returns:
+        새로운 파일 이름
+    """
+    directory = os.path.dirname(filepath)
+    filename = os.path.basename(filepath)
+    name, ext = os.path.splitext(filename)
+
+    base_name = name.split('_')[0] if '_' in name else name
+    counter = 1
+
+    new_filepath = filepath
+    while os.path.exists(new_filepath):
+        new_filename = f"{base_name}_{counter}{ext}"
+        new_filepath = os.path.join(directory, new_filename)
+        counter += 1
+
+    return new_filepath
+
 
 def send_ack(missed_seqs : list[int], sock : socket.socket, target_address : tuple):
     arr = array.array('i', missed_seqs)
@@ -36,13 +58,11 @@ def flush_receive_buffer(sock):
         # Reset to blocking mode
         sock.setblocking(True)
 
+
 def start_server(host='localhost', port=9999, target_dir="received"):
     # 서버 소켓 생성
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind((host, port))
-
-    # monitor = BufferMonitor(server_socket)
-    # monitor.start_monitoring()
 
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFFER_SIZE)
 
@@ -73,15 +93,10 @@ def start_server(host='localhost', port=9999, target_dir="received"):
                 # 실제 데이터 수신 시에는 buffer_size 사용
                 last_signal_time = time.time()
 
-                # remaining_buffer = peek_buffer(server_socket, BUFFER_SIZE)
-                # if remaining_buffer > 0:
-                #     print(f"처리 후 버퍼에 {remaining_buffer} 바이트 남음")
                 data, _ = server_socket.recvfrom(buffer_size)
 
                 seq_num, chunk_size = struct.unpack('!II', data[:8])
                 chunk_data = data[8:8 + chunk_size]
-
-                # print(f"받은 청크 (길이{len(chunk_data)}) : {chunk_data}")
 
                 chunks[seq_num] = chunk_data
 
@@ -119,18 +134,9 @@ def start_server(host='localhost', port=9999, target_dir="received"):
 
         file_path = f"{target_dir}/{filename}"
 
-        # 이미 존재하는 파일은 _dup를 붙임
-        is_exist = True
-        # while is_exist:
-        #     if os.path.exists(file_path):
-        #         print(f"이미 존재하는 파일 : {file_path}")
-        #         file_path = file_path.split('.')
-        #         file_path = "".join(file_path[:-1]) + "_dup." + file_path[-1]
-        #         print(f"파일이름 변경 -> {file_path}")
-        #     else:
-        #         is_exist = False
-
         Path(target_dir).mkdir(parents=True, exist_ok=True)
+
+        make_new_filename(file_path)
 
         # 파일 재조합
         with open(file_path, 'wb') as f:

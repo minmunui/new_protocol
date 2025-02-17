@@ -6,7 +6,7 @@ import struct
 import time
 from array import array
 
-KB_1 = 1024
+KB = 1024
 
 
 def wait_ack(sock: socket.socket, timeout: float = 3.0) -> array[int]:
@@ -25,7 +25,7 @@ def wait_ack(sock: socket.socket, timeout: float = 3.0) -> array[int]:
     sock.settimeout(timeout)
 
     try:
-        packed_data, addr = sock.recvfrom(KB_1 * 32)
+        packed_data, addr = sock.recvfrom(KB * 32)
         # ACK는 정수의 배열
         result_array = array('i')
         result_array.frombytes(packed_data)
@@ -80,7 +80,7 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
     print(f"서버 주소: {host}:{port}")
     print(f"버퍼 크기: {buffer_size}")
 
-    CHUNK_SIZE = buffer_size - 8
+    chunk_size = buffer_size - 8
 
     losses = []
 
@@ -91,7 +91,7 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
 
         # 파일 크기 확인 및 청크 수 계산
         file_size = os.path.getsize(filename)
-        total_chunks = math.ceil(file_size / CHUNK_SIZE)
+        total_chunks = math.ceil(file_size / chunk_size)
         print(f"청크 수: {total_chunks}")
 
         # 파일 정보 전송 (파일명 + 총 청크 수)
@@ -105,11 +105,10 @@ def send_file(filename: str, host: str = 'localhost', port: int = 9999, buffer_s
         start_time = time.time()
         with open(filename, 'rb') as f:
             for seq_num in range(total_chunks):
-                chunk_data = f.read(CHUNK_SIZE)
+                chunk_data = f.read(chunk_size)
 
                 # SEQ 번호와 청크 크기를 포함하여 패킷 구성
-                packet = struct.pack('!II', seq_num, CHUNK_SIZE) + chunk_data
-                # print(f"전송 패킷 (길이 {len(packet)}){packet}", end="")
+                packet = struct.pack('!II', seq_num, chunk_size) + chunk_data
                 packet_dict[seq_num] = packet
                 client_socket.sendto(packet, server_address)
 
