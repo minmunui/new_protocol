@@ -62,7 +62,7 @@ class TCPFileClient:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-s", "--host", type=str, default="127.0.0.1")
-    parser.add_argument("-p", "--port", type=int, defulat=9999)
+    parser.add_argument("-p", "--port", type=int, default=9999)
     parser.add_argument("-f", "--filename", type=str, required=True)
 
 
