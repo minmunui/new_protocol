@@ -33,10 +33,11 @@ def make_new_filename(filepath:str):
     return new_filepath
 
 
-def send_ack(missed_seqs : list[int], sock : socket.socket, target_address : tuple):
+def send_ack(missed_seqs : list[int], sock : socket.socket, target_address : tuple, buffer_size : int = 1024):
     arr = array.array('i', missed_seqs)
     packed = arr.tobytes()
     print(f"전송할 패킷정보 크기 {len(packed)}")
+    print(f"손실된 옹량 {len(packed) / 4 * buffer_size}")
     try:
         sock.sendto(packed, target_address)
     except OSError as e:
@@ -51,7 +52,6 @@ def flush_receive_buffer(sock):
     try:
         while True:
             data = sock.recvfrom(BUFFER_SIZE)
-            print(f"비운 데이터 {data}")
     except BlockingIOError:
         pass
     finally:
@@ -71,8 +71,11 @@ def start_server(host='localhost', port=9999, target_dir="received"):
 
     while True:
         flush_receive_buffer(server_socket)
+
+        server_socket.setblocking(True)
         # 파일 정보는 항상 고정된 크기로 받기
         data, client_address = server_socket.recvfrom(512)  # 초기 정보는 작은 크기로 받음
+
         buffer_size, total_chunks, filename = struct.unpack('!II256s', data[:264])
         try:
             filename = filename.decode().strip('\x00')
@@ -84,15 +87,18 @@ def start_server(host='localhost', port=9999, target_dir="received"):
         # 이후 데이터 수신할 때는 지정된 버퍼 크기 사용
         chunks = {}
         start_time = time.time()
-        timeout = 10
+        timeout = 5
 
         last_seq_num = total_chunks - 1
+
+        is_error = False
 
         while len(chunks) < total_chunks:
             try:
                 # 실제 데이터 수신 시에는 buffer_size 사용
                 last_signal_time = time.time()
 
+                server_socket.settimeout(timeout)
                 data, _ = server_socket.recvfrom(buffer_size)
 
                 seq_num, chunk_size = struct.unpack('!II', data[:8])
@@ -117,43 +123,47 @@ def start_server(host='localhost', port=9999, target_dir="received"):
                         last_seq_num = max(missed_seqs)
                         print(f"새로운 last_seq = {last_seq_num}")
 
-                    send_ack(missed_seqs, server_socket, client_address)
-                # 타임아웃 체크
-                if time.time() - last_signal_time > timeout:
-                    raise TimeoutError("파일 수신 시간 초과")
+                    send_ack(missed_seqs, server_socket, client_address, buffer_size)
 
             except (struct.error, IndexError) as e:
                 print(f"\n패킷 손상: {e}")
-                continue
-        print()
-        transfer_end_time = time.time()
-        transfer_elapsed_time = transfer_end_time - start_time
-        print(f"transfer_elapsed_time\t{transfer_elapsed_time}")
+                is_error = True
+                break
+            except socket.timeout:
+                print(f"데이터 타임아웃")
+                is_error = True
+                break
 
-        print("\n모든 청크 수신 완료. 파일 재조합 시작...")
+        if not is_error:
+            print()
+            transfer_end_time = time.time()
+            transfer_elapsed_time = transfer_end_time - start_time
+            print(f"transfer_elapsed_time\t{transfer_elapsed_time}")
 
-        file_path = f"{target_dir}/{filename}"
+            print("\n모든 청크 수신 완료. 파일 재조합 시작...")
 
-        Path(target_dir).mkdir(parents=True, exist_ok=True)
+            file_path = f"{target_dir}/{filename}"
 
-        make_new_filename(file_path)
+            Path(target_dir).mkdir(parents=True, exist_ok=True)
 
-        # 파일 재조합
-        with open(file_path, 'wb') as f:
-            for i in range(total_chunks):
-                # print(f"{i}번째 청크 조합중\n{chunks[i]}", end='')
-                if i in chunks:
-                    f.write(chunks[i])
-                else:
-                    print(f"경고: 청크 {i} 유실")
+            make_new_filename(file_path)
 
-        total_end_time = time.time()
-        total_elapsed_time = total_end_time - start_time
-        file_size = os.path.getsize(file_path)
-        print(f"measured_transfer_speed\t{file_size / transfer_elapsed_time}")
-        print(f"measured_total_speed\t{file_size / total_elapsed_time}")
-        print(f"파일 {filename} 수신 완료!")
-        print(f"저장 경로 {file_path}")
+            # 파일 재조합
+            with open(file_path, 'wb') as f:
+                for i in range(total_chunks):
+                    # print(f"{i}번째 청크 조합중\n{chunks[i]}", end='')
+                    if i in chunks:
+                        f.write(chunks[i])
+                    else:
+                        print(f"경고: 청크 {i} 유실")
+
+            total_end_time = time.time()
+            total_elapsed_time = total_end_time - start_time
+            file_size = os.path.getsize(file_path)
+            print(f"measured_transfer_speed\t{file_size / transfer_elapsed_time}")
+            print(f"measured_total_speed\t{file_size / total_elapsed_time}")
+            print(f"파일 {filename} 수신 완료!")
+            print(f"저장 경로 {file_path}")
 
 
 # 사용 예시
