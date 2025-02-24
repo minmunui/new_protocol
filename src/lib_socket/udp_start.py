@@ -7,7 +7,7 @@ from udp_client import send_file
 
 KB = 1024
 
-def program(filename: str, host: str = 'localhost', port: int = 9999, buffer_size: int = 4096):
+def program(filename: str, host: str = 'localhost', port: int = 9999):
     start_buffer_size_coef = 4
     end_buffer_size_coef = 16
 
@@ -70,10 +70,10 @@ if __name__ == "__main__":
     buffer_size = args.buffer_size
 
     if is_developer:
-        program(file_name, host=host, port=port, buffer_size=buffer_size * KB)
+        program(file_name, host=host, port=port)
 
     if is_client:
-        send_file(file_name, host=host, port=port, buffer_size=buffer_size * KB, interval=interval)
+        send_file(file_name, host=host, port=port, buffer_size=buffer_size, interval=interval)
 
     else:
         start_server(host=host, port=port)
