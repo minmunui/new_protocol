@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--client", type=bool, default=False)
     parser.add_argument("-t", "--target", type=str, default="localhost")
     parser.add_argument("-p", "--port", type=int, default=9999)
-    parser.add_argument("-b", "--buffer_size", type=int, default=1)
+    parser.add_argument("-b", "--buffer_size", type=int, default=1460)
     parser.add_argument("-d", "--developer", type=bool, default=False)
     parser.add_argument("-i", "--interval", type=float, default=0.0001)
 
