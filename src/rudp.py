@@ -14,6 +14,7 @@ KB = 1024
 MTU_DATA_SIZE = 1480
 REDUNDANCY_SIZE = 8
 
+
 def wait_ack(sock: socket.socket, timeout: float = 3.0) -> array.array[int]:
     """
     ack를 기다립니다. 일정 시간동안 응답이 없을 경우 예외를 발생시킵니다.
@@ -179,10 +180,12 @@ class RUDP(Protocol):
         while True:
             flush_receive_buffer(server_socket)
 
-            server_socket.setblocking(True)
             # 파일 정보는 항상 고정된 크기로 받기
-            data, client_address = server_socket.recvfrom(512)  # 초기 정보는 작은 크기로 받음
-
+            try:
+                data, client_address = server_socket.recvfrom(512)  # 초기 정보는 작은 크기로 받음
+            except:
+                flush_receive_buffer(server_socket)
+                continue
             buffer_size, total_chunks, filename = struct.unpack('!II256s', data[:264])
             try:
                 filename = filename.decode().strip('\x00')
@@ -266,7 +269,7 @@ class RUDP(Protocol):
                 total_end_time = time.time()
                 total_elapsed_time = total_end_time - start_time
                 file_size = os.path.getsize(file_path)
-                logger.info(f"measured_transfer_speed\t{file_size / transfer_elapsed_time}")
-                logger.info(f"measured_total_speed\t{file_size / total_elapsed_time}")
+                logger.info(f"순수 전송 속도 \t{file_size / transfer_elapsed_time / 1024 / 1024}MB/s")
+                logger.info(f"전체 속도 \t{file_size / total_elapsed_time / 1024 / 1024}MB/s")
                 logger.info(f"파일 {filename} 수신 완료!")
                 logger.info(f"저장 경로 {file_path}")

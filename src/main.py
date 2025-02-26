@@ -4,6 +4,7 @@ import time
 
 from protocol import Protocol
 from rudp import RUDP
+import logger
 from tcp import TCP
 
 KB = 1024
@@ -59,6 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--buffer_size", type=int, default=1480)
     parser.add_argument("-d", "--developer", type=bool, default=False)
     parser.add_argument("-i", "--interval", type=float, default=0.0001)
+    parser.add_argument("-l", "--log", type=bool, default=False)
     parser.add_argument('--protocol', type=str, default='rudp')
 
     args = parser.parse_args()
@@ -73,8 +75,11 @@ if __name__ == "__main__":
     arg_interval = args.interval
     arg_buffer_size = args.buffer_size
     arg_protocol = args.protocol
-
+    arg_logger = args.log
     protocol = Protocol()
+
+    if arg_logger:
+        logger.get_logger().start_file_logging()
 
     if arg_protocol == 'rudp':
         protocol = RUDP()

@@ -1,6 +1,7 @@
 import os
 
 from protocol import BUFFER_SIZE
+import logger
 
 
 def make_new_filename(filepath: str):
@@ -24,6 +25,7 @@ def make_new_filename(filepath: str):
         new_filepath = os.path.join(directory, new_filename)
         counter += 1
 
+    logger.info(f"새로운 파일 이름: {new_filepath}")
     return new_filepath
 
 
@@ -32,11 +34,14 @@ def flush_receive_buffer(sock):
     sock.setblocking(False)
     print(f"socket을 비웁니다.")
     # Read until buffer is empty
+    total = 0
     try:
         while True:
             data = sock.recvfrom(BUFFER_SIZE)
+            total += len(data)
     except BlockingIOError:
         pass
     finally:
+        print(f"읽은 데이터 크기 {total}")
         # Reset to blocking mode
         sock.setblocking(True)
