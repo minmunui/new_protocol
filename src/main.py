@@ -2,12 +2,14 @@ import argparse
 import datetime
 import time
 
-from udp_server import start_server
-from udp_client import send_file
+from protocol import Protocol
+from rudp import RUDP
+from tcp import TCP
 
 KB = 1024
 
-def program(filename: str, host: str = 'localhost', port: int = 9999):
+
+def program(filename: str, host: str = 'localhost', port: int = 9999, _protocol: Protocol = RUDP()):
     start_buffer_size_coef = 4
     end_buffer_size_coef = 16
 
@@ -21,8 +23,8 @@ def program(filename: str, host: str = 'localhost', port: int = 9999):
 
     str_time_now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
-
-    log_name = str_time_now + "itvl" + str(start_interval) + '-' + str(end_interval) + "bfr" + str(start_buffer_size_coef) + "-" + str(end_buffer_size_coef)
+    log_name = str_time_now + "itvl" + str(start_interval) + '-' + str(end_interval) + "bfr" + str(
+        start_buffer_size_coef) + "-" + str(end_buffer_size_coef)
     with open(log_name, 'w', encoding='utf-8') as file:
         file.write(f"{log_name}\n")
         while interval <= end_interval:
@@ -30,9 +32,9 @@ def program(filename: str, host: str = 'localhost', port: int = 9999):
             while buffer_size_coef <= end_buffer_size_coef:
                 file.write(f"Buffer Size : {buffer_size_coef}\t Interval : {interval}\n")
                 for i in range(iterate_num):
-                    losses = send_file(filename, host, port, 1024 * buffer_size_coef, interval)
+                    losses = _protocol.send_file(filename, host, port, 1024 * buffer_size_coef, interval)
                     time.sleep(5)
-                    file.write(f"Iteration : {i+1}\n")
+                    file.write(f"Iteration : {i + 1}\n")
                     for loss in losses:
                         volume_lossed = len(loss) * buffer_size_coef * 4
                         file.write(f"LOSS : {volume_lossed}\n")
@@ -54,27 +56,38 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--client", type=bool, default=False)
     parser.add_argument("-t", "--target", type=str, default="localhost")
     parser.add_argument("-p", "--port", type=int, default=9999)
-    parser.add_argument("-b", "--buffer_size", type=int, default=1460)
+    parser.add_argument("-b", "--buffer_size", type=int, default=1480)
     parser.add_argument("-d", "--developer", type=bool, default=False)
     parser.add_argument("-i", "--interval", type=float, default=0.0001)
+    parser.add_argument('--protocol', type=str, default='rudp')
 
     args = parser.parse_args()
 
-    host = args.target
-    port = args.port
-    is_client = args.client
 
-    is_developer = args.developer
-    file_name = args.file
-    interval = args.interval
-    buffer_size = args.buffer_size
+    arg_host = args.target
+    arg_port = args.port
+    arg_is_client = args.client
 
-    if is_developer:
-        program(file_name, host=host, port=port)
+    arg_is_developer = args.developer
+    arg_file_name = args.file
+    arg_interval = args.interval
+    arg_buffer_size = args.buffer_size
+    arg_protocol = args.protocol
 
-    if is_client:
-        send_file(file_name, host=host, port=port, buffer_size=buffer_size, interval=interval)
+    protocol = Protocol()
+
+    if arg_protocol == 'rudp':
+        protocol = RUDP()
+    elif arg_protocol == 'tcp':
+        protocol = TCP()
+    else:
+        raise ValueError("Invalid protocol. Please choose 'rudp' or 'tcp'.")
+
+    if arg_is_developer:
+        program(arg_file_name, host=arg_host, port=arg_port)
+
+    if arg_is_client:
+        protocol.send_file(arg_file_name, host=arg_host, port=arg_port, buffer_size=arg_buffer_size, interval=arg_interval)
 
     else:
-        start_server(host=host, port=port)
-
+        protocol.start_server(host=arg_host, port=arg_port)
