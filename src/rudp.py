@@ -11,7 +11,7 @@ from utils import flush_receive_buffer, make_new_filename
 import logger
 
 KB = 1024
-MTU_DATA_SIZE = 1480
+MTU_DATA_SIZE = 1460
 REDUNDANCY_SIZE = 8
 
 
@@ -103,10 +103,16 @@ class RUDP(Protocol):
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server_address = (host, port)
         logger.info(f"파일 {filename}을(를) 전송합니다...")
+
+
+
         logger.info(f"서버 주소: {host}:{port}")
         logger.info(f"버퍼 크기: {buffer_size}")
 
         chunk_size = buffer_size - REDUNDANCY_SIZE
+
+
+        logger.info(f"청크 사이즈: {chunk_size}")
 
         losses = []
 
@@ -117,6 +123,7 @@ class RUDP(Protocol):
                 raise FileNotFoundError(f"파일 {filename}을(를) 찾을 수 없습니다.")
 
             # 파일 크기 확인 및 청크 수 계산
+            start_time = time.time()
             file_size = os.path.getsize(filename)
             total_chunks = math.ceil(file_size / chunk_size)
             logger.info(f"청크 수: {total_chunks}")
@@ -129,7 +136,6 @@ class RUDP(Protocol):
             packet_dict = {}
             # 파일 전송 시작
 
-            start_time = time.time()
             with open(filename, 'rb') as f:
                 for seq_num in range(total_chunks):
                     chunk_data = f.read(chunk_size)
@@ -145,8 +151,6 @@ class RUDP(Protocol):
                     progress = ((seq_num + 1) / total_chunks) * 100
                     print(f"\r전송 진행률: {progress:.1f}% 전송한 패킷 {seq_num:d}", end='')
 
-            logger.info(f"\n파일 {filename} 전송")
-            logger.info(f"소요시간 {time.time() - start_time}")
             transfer_complete = False
 
             last_seq_number = len(packet_dict) - 1
@@ -165,6 +169,10 @@ class RUDP(Protocol):
                     logger.info(f"소실패킷 재전송 dropped_seq_numbers: {dropped_seq_numbers}")
                     resend_dropped_data(client_socket, dropped_seq_numbers, packet_dict, server_address)
 
+            elapsed_time = time.time() - start_time
+            filesize = os.path.getsize(filename)
+
+            logger.debug(f"transfer_time:{str(filesize / 1024 / 1024 / elapsed_time)}|{str(buffer_size)}")
         finally:
             client_socket.close()
             return losses

@@ -31,6 +31,7 @@ class TCP(Protocol):
         try:
             # 소켓 생성 및 연결
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            start_time = time.time()
             sock.connect((host, port))
 
             # 파일 크기 및 이름 정보 구성
@@ -48,6 +49,7 @@ class TCP(Protocol):
 
             # 파일 데이터 전송
             bytes_sent = 0
+            logger.info(f"퍼버 사이즈 {buffer_size}")
             with open(filename, 'rb') as file:
                 while True:
                     data = file.read(buffer_size)
@@ -55,11 +57,14 @@ class TCP(Protocol):
                         break
                     sock.sendall(data)
                     bytes_sent += len(data)
-                    logger.debug(f"전송 중: {bytes_sent}/{filesize} 바이트 ({bytes_sent / filesize * 100:.2f}%)")
+                    # print(f"전송 중: {bytes_sent}/{filesize} 바이트 ({bytes_sent / filesize * 100:.2f}%)", end="")
                     time.sleep(interval)
 
             # 전송 완료 확인
             # logger.info(f"파일 전송 완료: {filename} ({filesize} 바이트)")
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            logger.debug(f"transfer_time:{str(filesize / 1024 / 1024 / elapsed_time)}|{str(buffer_size)}")
 
             # 서버로부터 수신 확인 메시지 받기
             response = sock.recv(1024).decode('utf-8')
