@@ -92,6 +92,8 @@ def process_ack(sock: socket.socket, client_address: tuple, packet_dict: dict, l
 
 class RUDP(Protocol):
 
+    MSS = 1472
+
     def __init__(self):
         pass
 

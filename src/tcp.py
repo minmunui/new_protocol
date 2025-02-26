@@ -10,6 +10,8 @@ from protocol import Protocol, BUFFER_SIZE
 
 
 class TCP(Protocol):
+
+    MSS = 1460
     def send_file(self, filename: str, host: str, port: int, buffer_size: int, interval: float = 0.0):
         """
         파일을 전송하는 함수입니다. 파일을 읽어서 buffer_size만큼 읽어서 전송합니다.

@@ -57,14 +57,13 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--client", type=bool, default=False)
     parser.add_argument("-t", "--target", type=str, default="localhost")
     parser.add_argument("-p", "--port", type=int, default=9999)
-    parser.add_argument("-b", "--buffer_size", type=int, default=1480)
+    parser.add_argument("-b", "--buffer_size", type=int, default=1)
     parser.add_argument("-d", "--developer", type=bool, default=False)
     parser.add_argument("-i", "--interval", type=float, default=0.0001)
     parser.add_argument("-l", "--log", type=bool, default=False)
     parser.add_argument('--protocol', type=str, default='rudp')
 
     args = parser.parse_args()
-
 
     arg_host = args.target
     arg_port = args.port
@@ -82,8 +81,10 @@ if __name__ == "__main__":
         logger.get_logger().start_file_logging()
 
     if arg_protocol == 'rudp':
+        buffer_size = 1460 + (arg_buffer_size - 1) * RUDP.MSS
         protocol = RUDP()
     elif arg_protocol == 'tcp':
+        buffer_size = arg_buffer_size * TCP.MSS
         protocol = TCP()
     else:
         raise ValueError("Invalid protocol. Please choose 'rudp' or 'tcp'.")
@@ -91,8 +92,10 @@ if __name__ == "__main__":
     if arg_is_developer:
         program(arg_file_name, host=arg_host, port=arg_port)
 
+
     if arg_is_client:
-        protocol.send_file(arg_file_name, host=arg_host, port=arg_port, buffer_size=arg_buffer_size, interval=arg_interval)
+        protocol.send_file(arg_file_name, host=arg_host, port=arg_port, buffer_size=buffer_size,
+                           interval=arg_interval)
 
     else:
         protocol.start_server(host=arg_host, port=arg_port)
