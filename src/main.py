@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--buffer_size", type=int, default=1)
     parser.add_argument("-d", "--developer", type=bool, default=False)
     parser.add_argument("-i", "--interval", type=float, default=0.0001)
-    parser.add_argument("-l", "--log", type=bool, default=False)
+    parser.add_argument("-l", "--log", type=str, default="")
     parser.add_argument('--protocol', type=str, default='rudp')
 
     args = parser.parse_args()
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     protocol = Protocol()
 
     if arg_logger:
-        logger.get_logger().start_file_logging()
+        logger.get_logger().start_file_logging(arg_logger)
 
     if arg_protocol == 'rudp':
         buffer_size = 1460 + (arg_buffer_size - 1) * RUDP.MSS
