@@ -178,13 +178,13 @@ class RUDP(Protocol):
         logger.info(f"파일을 받을 디렉터리: {target_dir}")
 
         while True:
-            flush_receive_buffer(server_socket)
+            # flush_receive_buffer(server_socket)
 
             # 파일 정보는 항상 고정된 크기로 받기
             try:
                 data, client_address = server_socket.recvfrom(512)  # 초기 정보는 작은 크기로 받음
             except:
-                flush_receive_buffer(server_socket)
+                # flush_receive_buffer(server_socket)
                 continue
             buffer_size, total_chunks, filename = struct.unpack('!II256s', data[:264])
             try:
@@ -270,6 +270,7 @@ class RUDP(Protocol):
                 total_elapsed_time = total_end_time - start_time
                 file_size = os.path.getsize(file_path)
                 logger.info(f"순수 전송 속도 \t{file_size / transfer_elapsed_time / 1024 / 1024}MB/s")
+                logger.debug(f"{file_size / transfer_elapsed_time / 1024 / 1024}")
                 logger.info(f"전체 속도 \t{file_size / total_elapsed_time / 1024 / 1024}MB/s")
                 logger.info(f"파일 {filename} 수신 완료!")
                 logger.info(f"저장 경로 {file_path}")

@@ -57,7 +57,7 @@ class TCP(Protocol):
                     time.sleep(interval)
 
             # 전송 완료 확인
-            logger.info(f"파일 전송 완료: {filename} ({filesize} 바이트)")
+            # logger.info(f"파일 전송 완료: {filename} ({filesize} 바이트)")
 
             # 서버로부터 수신 확인 메시지 받기
             response = sock.recv(1024).decode('utf-8')
@@ -99,7 +99,7 @@ class TCP(Protocol):
         try:
             while True:
                 conn, addr = sock.accept()
-                logger.info(f"클라이언트가 연결되었습니다: {addr}")
+                # logger.info(f"클라이언트가 연결되었습니다: {addr}")
 
                 try:
                     # 전송 측정 시작 (파일 메타데이터 수신 직전)
@@ -125,9 +125,7 @@ class TCP(Protocol):
                     # 파일 저장 경로
                     filepath = os.path.join(target_dir, filename)
 
-                    logger.info(f"파일 수신 시작: {filename} (크기: {filesize} 바이트)")
-
-                    # 메모리에 파일 데이터 수신 (BytesIO 사용)
+                    # logger.info(f"파일 수신 시작: {filename} (크기: {filesize} 바이트)")
                     received_size = 0
                     file_data = bytearray()
 
@@ -145,9 +143,9 @@ class TCP(Protocol):
                         received_size += len(data)
 
                         # 진행 상황 로깅
-                        if received_size % (BUFFER_SIZE * 10) == 0 or received_size == filesize:
-                            logger.debug(
-                                f"수신 중: {received_size}/{filesize} 바이트 ({received_size / filesize * 100:.2f}%)")
+                        # if received_size % (BUFFER_SIZE * 10) == 0 or received_size == filesize:
+                        #     logger.debug(
+                        #         f"수신 중: {received_size}/{filesize} 바이트 ({received_size / filesize * 100:.2f}%)")
 
                     # 전송 측정 종료 (모든 데이터 수신 직후)
                     time_end = time.time()
@@ -158,9 +156,10 @@ class TCP(Protocol):
                     if received_size == filesize:
                         logger.info(f"파일 '{filename}'을(를) 성공적으로 수신했습니다. ({filesize} 바이트)")
                         logger.info(f"순수 전송 시간: {transfer_time:.2f}초, 전송 속도: {transfer_speed:.2f} MB/s")
+                        logger.debug(f"{transfer_speed}")
 
                         # 파일 쓰기 시작
-                        logger.info(f"파일 '{filename}'을(를) 디스크에 쓰는 중...")
+                        # logger.info(f"파일 '{filename}'을(를) 디스크에 쓰는 중...")
                         write_start = time.time()
 
                         with open(filepath, 'wb') as file:
@@ -168,18 +167,18 @@ class TCP(Protocol):
 
                         write_end = time.time()
                         write_time = write_end - write_start
-                        logger.info(f"파일 쓰기 완료: {write_time:.2f}초")
+                        # logger.info(f"파일 쓰기 완료: {write_time:.2f}초")
 
                         # 클라이언트에 응답 전송
                         response_message = (f"파일 수신 완료. 전송 속도: {transfer_speed:.2f} MB/s, "
                                             f"전송 시간: {transfer_time:.2f}초, 쓰기 시간: {write_time:.2f}초")
                         conn.send(response_message.encode('utf-8'))
                     else:
-                        logger.warning(f"파일 '{filename}'의 수신이 불완전합니다. (예상: {filesize}, 실제: {received_size})")
+                        # logger.warning(f"파일 '{filename}'의 수신이 불완전합니다. (예상: {filesize}, 실제: {received_size})")
                         conn.send("파일 수신 불완전".encode('utf-8'))
 
                     # 콘솔에 전송 속도 출력
-                    print(f"순수 전송 속도: {transfer_speed:.2f} MB/s (전송 시간: {transfer_time:.2f}초)")
+                    # print(f"순수 전송 속도: {transfer_speed:.2f} MB/s (전송 시간: {transfer_time:.2f}초)")
 
                 except Exception as e:
                     logger.error(f"파일 수신 중 오류 발생: {e}")
